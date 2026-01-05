@@ -4,9 +4,9 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import Seccsion from '../models/Seccsion.js';
 
-const ACCESS_TOKEN_TTL = '30m'; //* thường dưới 15 phút
+const ACCESS_TOKEN_TTL = '30s'; //* thường dưới 15 phút
 const REFRESH_TOKEN_TTL = 14 * 24 * 60 * 1000; //*thường dưới 14 ngày
-// ! Đăng ký
+// * Đăng ký
 export const signUp = async (req, res) => {
     try {
         const { username, password, email, firstName, lastName } = req.body;
@@ -37,7 +37,7 @@ export const signUp = async (req, res) => {
         res.status(500).json({ message: 'Lỗi hệ thống' });
     }
 };
-//! Đăng nhập signUp
+//* Đăng nhập signUp
 export const signIn = async (req, res) => {
     try {
         // * lấy từ input
@@ -85,7 +85,6 @@ export const signIn = async (req, res) => {
         res.status(500).json({ message: 'Lỗi hệ thống' });
     }
 };
-
 //* Đăng xuất
 export const signOut = async (req, res) => {
     try {
@@ -100,6 +99,41 @@ export const signOut = async (req, res) => {
         return res.sendStatus(204);
     } catch (error) {
         console.log('Lỗi khi gọi signIn', error);
+        res.status(500).json({ message: 'Lỗi hệ thống' });
+    }
+};
+//* Tạo accesstoken mới từ refresh Token
+export const refreshToken = async (req, res) => {
+    try {
+        //* Lấy refreshToken từ cookie
+        const token = req.cookies?.refreshToken;
+        if (!token) {
+            return res.status(401).json({
+                message: 'Token không tồn tại !',
+            });
+        }
+        //* so với refresh token trong db */
+        const session = await Seccsion.findOne({ refreshToken: token });
+        if (!session) {
+            res.status(403).json({ message: 'Token không hợp lệ hoặc đã hết hạn' });
+        }
+        //* Kiểm tra xem hết hạn token chưa
+        if (session.expiresAt < new Date()) {
+            res.status(403).json({ message: 'Token đã hết hạn' });
+        }
+
+        //* Tạo accessToken mới
+        const accessToken = jwt.sign(
+            {
+                userId: session.userId,
+            },
+            process.env.ACCESS_TOKEN_SECRET,
+            { expiresIn: ACCESS_TOKEN_TTL }
+        );
+        //* Return
+        return res.status(200).json({ accessToken });
+    } catch (error) {
+        console.error('Lỗi khi gọi refresh', error);
         res.status(500).json({ message: 'Lỗi hệ thống' });
     }
 };

@@ -5,7 +5,7 @@ import authRoute from './routes/authRoute.js';
 import userRoute from './routes/userRoute.js';
 import cookieParser from 'cookie-parser';
 import { protectedRoute } from './middlewares/authMiddleware.js';
-
+import cors from 'cors';
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -13,6 +13,12 @@ const PORT = process.env.PORT || 5000;
 //* middleware
 app.use(express.json());
 app.use(cookieParser());
+app.use(
+    cors({
+        origin: process.env.CLIENT_URL,
+        credentials: true,
+    })
+);
 //*publicRoutes
 app.use('/api/auth', authRoute);
 //* privateRoutes
